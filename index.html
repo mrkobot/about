@@ -14,17 +14,14 @@
   body {
     font-family: 'DM Sans', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
-    padding: 30vh 1.5rem 50vh;
+    padding: 3rem 1.5rem;
   }
   .reveal-wrap { max-width: 760px; margin: 0 auto; }
-
   .r-line     { display: block; font-size: clamp(1.45rem, 3.2vw, 2.5rem); font-weight: 400; line-height: 1.5; }
   .r-thesis .w { font-weight: 600; }
   .r-gap      { display: block; height: 2.75em; }
   .r-coda-gap { display: block; height: 3.5em; }
   .r-breath   { display: block; height: 1.2em; }
-
-  /* Words: display inline, spacing in textContent, no pseudo-elements */
   .w { display: inline; opacity: 0.08; }
 </style>
 </head>
@@ -55,7 +52,7 @@ var STANZAS = [
 ];
 
 var wrap     = document.getElementById('reveal-wrap');
-var allWords = []; // { el, positionInLine, wordsInLine }
+var allWords = [];
 
 STANZAS.forEach(function(entry) {
   if (entry.type !== 'line') {
@@ -64,26 +61,26 @@ STANZAS.forEach(function(entry) {
     wrap.appendChild(sp);
     return;
   }
-
   var line = document.createElement('span');
   line.className = 'r-line' + (entry.thesis ? ' r-thesis' : '');
-
   var words = entry.text.split(' ');
   words.forEach(function(word, i) {
     var span = document.createElement('span');
     span.className = 'w';
     span.textContent = i < words.length - 1 ? word + ' ' : word;
     line.appendChild(span);
-    // Store position metadata for stagger calculation
     allWords.push({ el: span, pos: i, total: words.length });
   });
-
   wrap.appendChild(line);
 });
 
-// ── Reveal parameters ─────────────────────────────────────────────
-var READING_LINE = 0.50; // fraction of viewport
-var ZONE_PX      = 40;   // tight zone — 1-2 words mid-reveal at a time
+// ── Scroll state from parent ──────────────────────────────────────
+var parentScrollY  = 0;
+var iframeTop      = 0;
+var parentVH       = 600;
+
+var READING_LINE = 0.50;
+var ZONE_PX      = 40;
 var MIN_OP       = 0.08;
 var MAX_OP       = 1.0;
 
@@ -93,19 +90,18 @@ function smoothstep(t) {
 }
 
 function update() {
-  var readingY = window.innerHeight * READING_LINE;
+  var readingY = parentVH * READING_LINE;
   var halfZone = ZONE_PX / 2;
 
   for (var i = 0; i < allWords.length; i++) {
     var wd   = allWords[i];
     var rect = wd.el.getBoundingClientRect();
 
-    // Stagger: spread words in a line across ~1 line-height of scroll
-    // Word 0 → base y. Word N-1 → base y + lineHeight.
-    // This makes words reveal left-to-right within each line.
-    var lineH  = rect.height * 1.5;
-    var frac   = wd.total > 1 ? wd.pos / (wd.total - 1) : 0;
-    var effY   = rect.top + rect.height / 2 + frac * lineH;
+    // Word position in parent viewport
+    var wordTopInParent = iframeTop - parentScrollY + rect.top;
+    var lineH = rect.height * 1.5;
+    var frac  = wd.total > 1 ? wd.pos / (wd.total - 1) : 0;
+    var effY  = wordTopInParent + rect.height / 2 + frac * lineH;
 
     var dist = effY - readingY;
     var progress;
@@ -117,15 +113,17 @@ function update() {
   }
 }
 
-var ticking = false;
-function onScroll() {
-  if (!ticking) {
-    requestAnimationFrame(function() { update(); ticking = false; });
-    ticking = true;
-  }
-}
+// Receive scroll info from parent
+window.addEventListener('message', function(e) {
+  if (!e.data || e.data.type !== 'aboutScroll') return;
+  parentScrollY = e.data.scrollY;
+  iframeTop     = e.data.iframeTop;
+  parentVH      = e.data.viewportHeight;
+  update();
+});
 
-window.addEventListener('scroll', onScroll, { passive: true });
+// Fallback: if no parent message, try local scroll (dev/preview)
+window.addEventListener('scroll', update, { passive: true });
 window.addEventListener('resize', update);
 update();
 </script>
