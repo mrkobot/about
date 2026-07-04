@@ -18,6 +18,7 @@
   }
   .reveal-wrap { max-width: 760px; margin: 0 auto; }
   .r-line     { display: block; font-size: clamp(1.45rem, 3.2vw, 2.5rem); font-weight: 400; line-height: 1.5; }
+  .r-headline { font-size: clamp(2rem, 4.5vw, 3.2rem); line-height: 1.25; }
   .r-thesis .w { font-weight: 600; }
   .r-gap      { display: block; height: 2.75em; }
   .r-coda-gap { display: block; height: 3.5em; }
@@ -30,8 +31,8 @@
 
 <script>
 var STANZAS = [
-  { type: 'line', text: 'Love is not a sentiment.',               thesis: true },
-  { type: 'line', text: 'It is the original human intelligence.', thesis: true },
+  { type: 'line', text: 'Love is not a sentiment.',               thesis: true, headline: true },
+  { type: 'line', text: 'It is the original human intelligence.', thesis: true, headline: true },
   { type: 'gap' },
   { type: 'line', text: "The first fire wasn\u2019t invented to make" },
   { type: 'line', text: 'wealth but to keep loved ones warm.' },
@@ -62,7 +63,7 @@ STANZAS.forEach(function(entry) {
     return;
   }
   var line = document.createElement('span');
-  line.className = 'r-line' + (entry.thesis ? ' r-thesis' : '');
+  line.className = 'r-line' + (entry.thesis ? ' r-thesis' : '') + (entry.headline ? ' r-headline' : '');
   var words = entry.text.split(' ');
   words.forEach(function(word, i) {
     var span = document.createElement('span');
