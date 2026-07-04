@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What If Love — About</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.3.9/iframeResizer.contentWindow.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: transparent; }
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 30vh 1.5rem 50vh;
+  }
+  .reveal-wrap { max-width: 760px; margin: 0 auto; }
+
+  .r-line     { display: block; font-size: clamp(1.45rem, 3.2vw, 2.5rem); font-weight: 400; line-height: 1.5; }
+  .r-thesis .w { font-weight: 600; }
+  .r-gap      { display: block; height: 2.75em; }
+  .r-coda-gap { display: block; height: 3.5em; }
+  .r-breath   { display: block; height: 1.2em; }
+
+  /* Words: display inline, spacing in textContent, no pseudo-elements */
+  .w { display: inline; opacity: 0.08; }
+</style>
+</head>
+<body data-iframe-height>
+<div class="reveal-wrap" id="reveal-wrap"></div>
+
+<script>
+var STANZAS = [
+  { type: 'line', text: 'Love is not a sentiment.',               thesis: true },
+  { type: 'line', text: 'It is the original human intelligence.', thesis: true },
+  { type: 'gap' },
+  { type: 'line', text: "The first fire wasn\u2019t invented to make" },
+  { type: 'line', text: 'wealth but to keep loved ones warm.' },
+  { type: 'line', text: "It\u2019s love that pushed us to gather," },
+  { type: 'line', text: 'to protect, to imagine, and to remember.' },
+  { type: 'gap' },
+  { type: 'line', text: 'To love is to choose sides,' },
+  { type: 'line', text: 'to assume risk, to absorb pain;' },
+  { type: 'line', text: 'It remains a power only humans hold.' },
+  { type: 'line', text: 'At the dawn of machine super-intelligence,' },
+  { type: 'line', text: 'there is no greater danger than' },
+  { type: 'line', text: 'ultimate power without ultimate concern.' },
+  { type: 'coda-gap' },
+  { type: 'line', text: 'What If Love exists to direct AI research' },
+  { type: 'line', text: 'toward making AI kinder.' },
+  { type: 'breath' },
+  { type: 'line', text: 'Because kinder, is smarter.' }
+];
+
+var wrap     = document.getElementById('reveal-wrap');
+var allWords = []; // { el, positionInLine, wordsInLine }
+
+STANZAS.forEach(function(entry) {
+  if (entry.type !== 'line') {
+    var sp = document.createElement('span');
+    sp.className = 'r-' + (entry.type === 'gap' ? 'gap' : entry.type === 'coda-gap' ? 'coda-gap' : 'breath');
+    wrap.appendChild(sp);
+    return;
+  }
+
+  var line = document.createElement('span');
+  line.className = 'r-line' + (entry.thesis ? ' r-thesis' : '');
+
+  var words = entry.text.split(' ');
+  words.forEach(function(word, i) {
+    var span = document.createElement('span');
+    span.className = 'w';
+    span.textContent = i < words.length - 1 ? word + ' ' : word;
+    line.appendChild(span);
+    // Store position metadata for stagger calculation
+    allWords.push({ el: span, pos: i, total: words.length });
+  });
+
+  wrap.appendChild(line);
+});
+
+// ── Reveal parameters ─────────────────────────────────────────────
+var READING_LINE = 0.50; // fraction of viewport
+var ZONE_PX      = 40;   // tight zone — 1-2 words mid-reveal at a time
+var MIN_OP       = 0.08;
+var MAX_OP       = 1.0;
+
+function smoothstep(t) {
+  t = Math.max(0, Math.min(1, t));
+  return t * t * (3 - 2 * t);
+}
+
+function update() {
+  var readingY = window.innerHeight * READING_LINE;
+  var halfZone = ZONE_PX / 2;
+
+  for (var i = 0; i < allWords.length; i++) {
+    var wd   = allWords[i];
+    var rect = wd.el.getBoundingClientRect();
+
+    // Stagger: spread words in a line across ~1 line-height of scroll
+    // Word 0 → base y. Word N-1 → base y + lineHeight.
+    // This makes words reveal left-to-right within each line.
+    var lineH  = rect.height * 1.5;
+    var frac   = wd.total > 1 ? wd.pos / (wd.total - 1) : 0;
+    var effY   = rect.top + rect.height / 2 + frac * lineH;
+
+    var dist = effY - readingY;
+    var progress;
+    if      (dist <= -halfZone) { progress = 1; }
+    else if (dist >=  halfZone) { progress = 0; }
+    else { progress = smoothstep(1 - (dist + halfZone) / ZONE_PX); }
+
+    wd.el.style.opacity = MIN_OP + (MAX_OP - MIN_OP) * progress;
+  }
+}
+
+var ticking = false;
+function onScroll() {
+  if (!ticking) {
+    requestAnimationFrame(function() { update(); ticking = false; });
+    ticking = true;
+  }
+}
+
+window.addEventListener('scroll', onScroll, { passive: true });
+window.addEventListener('resize', update);
+update();
+</script>
+</body>
+</html>
