@@ -24,6 +24,11 @@
   .r-coda-gap { display: block; height: 3.5em; }
   .r-breath   { display: block; height: 1.2em; }
   .w { display: inline; opacity: 0.08; }
+
+  @media (max-width: 640px) {
+    .r-line     { font-size: clamp(0.9rem, 5vw, 1.15rem); }
+    .r-headline { font-size: clamp(1rem, 5.5vw, 1.3rem); }
+  }
 </style>
 </head>
 <body data-iframe-height>
@@ -52,10 +57,8 @@ var STANZAS = [
   { type: 'line', text: 'Because kinder, is smarter.' }
 ];
 
-var wrap        = document.getElementById('reveal-wrap');
-var allWords     = [];   // flat list of { el, pos, total } — pos/total are recomputed per rendered line, not per authored line
-var lineEls      = [];   // the .r-line elements, each may wrap into 1+ visual lines depending on viewport
-var wordDataMap  = new Map();
+var wrap     = document.getElementById('reveal-wrap');
+var allWords = [];
 
 STANZAS.forEach(function(entry) {
   if (entry.type !== 'line') {
@@ -72,45 +75,10 @@ STANZAS.forEach(function(entry) {
     span.className = 'w';
     span.textContent = i < words.length - 1 ? word + ' ' : word;
     line.appendChild(span);
-    var data = { el: span, pos: i, total: words.length };
-    allWords.push(data);
-    wordDataMap.set(span, data);
+    allWords.push({ el: span, pos: i, total: words.length });
   });
   wrap.appendChild(line);
-  lineEls.push(line);
 });
-
-// ── Visual-line detection ─────────────────────────────────────────
-// The sweep's frac math needs each word's position within its actual
-// rendered line, not the authored STANZA phrase. On narrower viewports
-// one authored phrase can wrap into two or more visual lines, so this
-// groups word spans by rendered top position and reassigns pos/total
-// per group. Re-run whenever layout can change (load, resize, font swap).
-function computeLineGroups() {
-  lineEls.forEach(function(lineEl) {
-    var wordSpans = Array.prototype.slice.call(lineEl.children);
-    if (!wordSpans.length) return;
-
-    var groups  = [];
-    var lastTop = null;
-    wordSpans.forEach(function(span) {
-      var top = Math.round(span.getBoundingClientRect().top);
-      if (lastTop === null || Math.abs(top - lastTop) > 2) {
-        groups.push([]);
-        lastTop = top;
-      }
-      groups[groups.length - 1].push(span);
-    });
-
-    groups.forEach(function(group) {
-      group.forEach(function(span, i) {
-        var data = wordDataMap.get(span);
-        data.pos   = i;
-        data.total = group.length;
-      });
-    });
-  });
-}
 
 // ── Scroll state from parent ──────────────────────────────────────
 var parentScrollY  = 0;
@@ -160,29 +128,10 @@ window.addEventListener('message', function(e) {
   update();
 });
 
-// Recompute line groups whenever the layout can actually change.
-var resizeTimer = null;
-window.addEventListener('resize', function() {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(function() {
-    computeLineGroups();
-    update();
-  }, 150);
-});
-
 // Fallback: if no parent message, try local scroll (dev/preview)
 window.addEventListener('scroll', update, { passive: true });
-
-computeLineGroups();
+window.addEventListener('resize', update);
 update();
-
-// Font swap can shift word widths after the initial layout pass — recompute once fonts are ready.
-if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(function() {
-    computeLineGroups();
-    update();
-  });
-}
 </script>
 </body>
 </html>
